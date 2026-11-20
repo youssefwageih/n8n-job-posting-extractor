@@ -1,0 +1,1010 @@
+{
+  "name": "Job Posting Extractor & CV Matcher",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "a9293eac-1977-41e0-bf58-13ce196716db",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "155a6883-6099-4f52-b550-595dabb61d16",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-account",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-doc",
+              "leftValue": "={{ !!($json.message.document && $json.message.document.file_id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e650a042-feaa-40fb-956f-47b65132989a",
+      "name": "Is CV Upload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "995b0610-8f18-454e-a352-195e845d068c",
+      "name": "Get CV File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        32
+      ],
+      "webhookId": "ab2aa871-9e08-4749-b565-0a3999d12bef",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-account",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "joinPages": true
+        }
+      },
+      "id": "0fe6aeda-e530-4fd1-8156-05756aff8a57",
+      "name": "Extract CV Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        32
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CV Store",
+          "cachedResultName": "CV Store"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($('Telegram Trigger').item.json.message.chat.id) }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ String($('Telegram Trigger').item.json.message.chat.id) }}",
+            "file_name": "={{ ($('Telegram Trigger').item.json.message.document || {}).file_name || \"cv.pdf\" }}",
+            "cv_text": "={{ ($json.text || \"\").slice(0, 30000) }}",
+            "uploaded_at": "={{ $now.toFormat(\"yyyy-MM-dd HH:mm\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "file_name",
+              "displayName": "file_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "cv_text",
+              "displayName": "cv_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "uploaded_at",
+              "displayName": "uploaded_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2ce7fcd7-43f2-4e51-86e0-aa7b9cf96cf2",
+      "name": "Save CV",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Got your CV. Every job posting you send from now on will include a Fit / Partial fit / Miss check against it. Send a new PDF anytime to replace it.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "89bec3b2-43d1-4cea-8cf5-6eb77ef16a29",
+      "name": "Confirm CV Saved",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        -64
+      ],
+      "webhookId": "f8b52698-51c6-4b23-b23f-3c1f4f547120",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-account",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "I could not read that file. Please send your CV as a text-based PDF (not a scanned image or Word file).",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "1859c126-c29f-4ed3-96ae-1b3a6dc6a92a",
+      "name": "CV Read Failed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        128
+      ],
+      "webhookId": "09d90b57-5512-440d-8fd2-74b4c927ac03",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-account",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CV Store",
+          "cachedResultName": "CV Store"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($('Telegram Trigger').item.json.message.chat.id) }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "669f0528-39f1-43ec-8b0b-8517c7c28f51",
+      "name": "Get Saved CV",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        320
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-url",
+              "leftValue": "={{ /https?:\\/\\/\\S+/.test($('Telegram Trigger').item.json.message.text || \"\") }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb08694d-be4f-422d-91f7-763cbf3668f5",
+      "name": "Has Link?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($('Telegram Trigger').item.json.message.text.match(/https?:\\/\\/\\S+/) || [\"\"])[0] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "cfbacfaf-e980-4314-84db-d8b4643fd1ad",
+      "name": "Fetch Job Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        944,
+        224
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "postingText",
+              "cssSelector": "body",
+              "skipSelectors": "script, style, noscript, svg, nav, footer, header, form, iframe"
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true,
+          "cleanUpText": true
+        }
+      },
+      "id": "6dcdfa9c-1460-40bb-a531-c64366c2f1aa",
+      "name": "Extract Page Text",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Job posting:\n\n{{ ($json.postingText || \"\").slice(0, 20000) }}\n\nCandidate CV:\n\n{{ ($('Get Saved CV').first().json.cv_text || \"NO CV PROVIDED\").slice(0, 15000) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a Job Posting Extractor. Turn a long job posting into a summary readable in under 30 seconds. Use ONLY information in the posting; never add requirements, tools, or tasks that are not there.\n\nFields:\n- isJobPosting: false if the text is not a job posting (then leave other fields as empty strings / empty array).\n- jobTitle: the title as written in the posting.\n- pay: copy figures exactly as stated, keeping currency and period (hourly, monthly, annual), e.g. \"$65,000 - $80,000 per year\". Include bonus, commission, or equity only if mentioned. If only implied (e.g. \"competitive salary\") write \"Not stated (described as competitive)\". If absent write \"Not stated\". Never estimate or guess.\n- toolsSkills, education, experience, other: brief keywords, a few words per item, comma-separated, not sentences (\"SQL\", not \"strong proficiency in writing complex SQL queries\"). Include soft skills only if the posting stresses them; skip generic ones like \"team player\" or \"detail-oriented\". If the posting separates required from preferred, add \"(preferred)\" after preferred items. If a category is not mentioned write \"Not stated\". \"other\" covers certifications, languages, licenses, clearances, work authorization; use an empty string if none.\n- keyTasks: 4 to 8 bullets, each starting with a verb (Build, Analyze, Maintain, Present, Coordinate), one short line of about 15 words or fewer. Merge duplicates and combine closely related duties. Skip company boilerplate, mission statements, benefits, and \"other duties as assigned\".\n- note: if the posting is vague or contradictory (e.g. two different pay ranges), one short note; otherwise an empty string.\n\n- fitVerdict: compare the candidate CV against the posting's requirements and tasks. \"Fit\" = meets the core requirements; \"Partial fit\" = meets some core requirements with notable gaps; \"Miss\" = lacks most core requirements. If the CV says NO CV PROVIDED, use \"No CV\" and leave fitMatches and fitGaps empty.\n- fitMatches: 2 to 5 short keyword items from the CV that match the posting's requirements.\n- fitGaps: up to 5 short keyword items the posting requires that the CV does not show; empty if none.\nBase the comparison only on what the CV and posting actually say.\n\nThe input may be a scraped web page containing navigation and unrelated text; focus on the main job posting."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "0b5be9e4-466a-4ffb-9dda-c964d6925120",
+      "name": "Summarize Job Posting",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1392,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "9145112b-bcd9-4714-b3c6-3f26baa5a3ef",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1408,
+        544
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-api-account",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"isJobPosting\":{\"type\":\"boolean\",\"description\":\"false if the text is not a job posting\"},\"jobTitle\":{\"type\":\"string\"},\"pay\":{\"type\":\"string\"},\"toolsSkills\":{\"type\":\"string\"},\"education\":{\"type\":\"string\"},\"experience\":{\"type\":\"string\"},\"other\":{\"type\":\"string\",\"description\":\"Empty string if none\"},\"keyTasks\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"note\":{\"type\":\"string\",\"description\":\"Short note on vague or contradictory info, else empty string\"},\"fitVerdict\":{\"type\":\"string\",\"enum\":[\"Fit\",\"Partial fit\",\"Miss\",\"No CV\"]},\"fitMatches\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"fitGaps\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"isJobPosting\",\"jobTitle\",\"pay\",\"toolsSkills\",\"education\",\"experience\",\"other\",\"keyTasks\",\"note\",\"fitVerdict\",\"fitMatches\",\"fitGaps\"]}"
+      },
+      "id": "b0eb01e1-f24a-4a31-978b-d37d231a7093",
+      "name": "Job Summary Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1536,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-job",
+              "leftValue": "={{ $json.output.isJobPosting }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "870cef01-ff0a-4110-8b59-260f855461d4",
+      "name": "Is Job Posting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f-date",
+              "name": "Date",
+              "value": "={{ $now.toFormat(\"yyyy-MM-dd HH:mm\") }}",
+              "type": "string"
+            },
+            {
+              "id": "f-title",
+              "name": "Job Title",
+              "value": "={{ $json.output.jobTitle }}",
+              "type": "string"
+            },
+            {
+              "id": "f-pay",
+              "name": "Pay",
+              "value": "={{ $json.output.pay || \"Not stated\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-tools",
+              "name": "Tools & Skills",
+              "value": "={{ $json.output.toolsSkills || \"Not stated\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-edu",
+              "name": "Education",
+              "value": "={{ $json.output.education || \"Not stated\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-exp",
+              "name": "Experience",
+              "value": "={{ $json.output.experience || \"Not stated\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-other",
+              "name": "Other",
+              "value": "={{ $json.output.other || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-tasks",
+              "name": "Key Tasks",
+              "value": "={{ ($json.output.keyTasks || []).map(t => \"• \" + t).join(\"\\n\") }}",
+              "type": "string"
+            },
+            {
+              "id": "f-note",
+              "name": "Notes",
+              "value": "={{ $json.output.note || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-cvfit",
+              "name": "CV Fit",
+              "value": "={{ ($json.output.fitVerdict || \"No CV\") + (($json.output.fitGaps || []).length ? \" | Gaps: \" + $json.output.fitGaps.join(\", \") : \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "f-link",
+              "name": "Link",
+              "value": "={{ ($('Telegram Trigger').item.json.message.text.match(/https?:\\/\\/\\S+/) || [''])[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "f-msg",
+              "name": "telegramMessage",
+              "value": "={{ (() => {\n  const o = $json.output;\n  const e = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n  const lines = [];\n  lines.push('<b>Job Title:</b> ' + e(o.jobTitle));\n  lines.push('');\n  lines.push('<b>Pay:</b> ' + e(o.pay || 'Not stated'));\n  lines.push('');\n  lines.push('<b>Requirements:</b>');\n  lines.push('- Tools &amp; skills: ' + e(o.toolsSkills || 'Not stated'));\n  lines.push('- Education: ' + e(o.education || 'Not stated'));\n  lines.push('- Experience: ' + e(o.experience || 'Not stated'));\n  if (o.other && o.other.trim()) lines.push('- Other: ' + e(o.other));\n  lines.push('');\n  lines.push('<b>Key Tasks:</b>');\n  (o.keyTasks || []).forEach((t) => lines.push('- ' + e(t)));\n  if (o.note && o.note.trim()) { lines.push(''); lines.push('<i>Note: ' + e(o.note) + '</i>'); }\n  lines.push('');\n  if (!o.fitVerdict || o.fitVerdict === 'No CV') {\n    lines.push('<b>CV Match:</b> No CV on file. Send your CV as a PDF to get a fit check.');\n  } else {\n    lines.push('<b>CV Match:</b> ' + e(o.fitVerdict));\n    if ((o.fitMatches || []).length) lines.push('- Matches: ' + e(o.fitMatches.join(', ')));\n    if ((o.fitGaps || []).length) lines.push('- Gaps: ' + e(o.fitGaps.join(', ')));\n  }\n  return lines.join('\\n');\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1f89253d-de80-4783-b0d5-4c4b8637729c",
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id",
+          "cachedResultName": "Job Analyzer"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json[\"Date\"] }}",
+            "Job Title": "={{ $json[\"Job Title\"] }}",
+            "Pay": "={{ $json[\"Pay\"] }}",
+            "Tools & Skills": "={{ $json[\"Tools & Skills\"] }}",
+            "Education": "={{ $json[\"Education\"] }}",
+            "Experience": "={{ $json[\"Experience\"] }}",
+            "Other": "={{ $json[\"Other\"] }}",
+            "Key Tasks": "={{ $json[\"Key Tasks\"] }}",
+            "Notes": "={{ $json[\"Notes\"] }}",
+            "Link": "={{ $json[\"Link\"] }}",
+            "CV Fit": "={{ $json[\"CV Fit\"] }}"
+          },
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pay",
+              "displayName": "Pay",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tools & Skills",
+              "displayName": "Tools & Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Education",
+              "displayName": "Education",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Experience",
+              "displayName": "Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Other",
+              "displayName": "Other",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Key Tasks",
+              "displayName": "Key Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CV Fit",
+              "displayName": "CV Fit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "da39092f-971c-42b8-b318-4ac132fea591",
+      "name": "Save to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1696,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-account",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $('Format Summary').item.json.telegramMessage }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "2bc53db5-4205-4197-972c-4b092ffa6c64",
+      "name": "Send Summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1920,
+        128
+      ],
+      "webhookId": "d047f4f1-e8bf-4d00-a547-fa9de1834e89",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-account",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "This doesn't look like a job posting, so I didn't summarize it. Send a job ad link or paste the job description text.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "df3cb57c-8220-4951-a989-406a7ddcc6f1",
+      "name": "Reply Not a Job Posting",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1472,
+        320
+      ],
+      "webhookId": "32708847-d28d-42d5-a9d9-09f9001ded6f",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-account",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Sorry, I couldn't open that link (the site may block automated access, e.g. LinkedIn or Indeed). Paste the job description text here instead and I'll summarize it.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "e31954e4-b45d-4bd8-9e86-87221c6f7aea",
+      "name": "Report Fetch Failure",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        320
+      ],
+      "webhookId": "b9c7fb78-090b-4e9b-b620-0e8fb89bfae3",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-account",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "posting-text",
+              "name": "postingText",
+              "value": "={{ $('Telegram Trigger').item.json.message.text || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4db0ce28-6966-4b3c-b902-b024fea4b5af",
+      "name": "Use Message Text",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1168,
+        512
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is CV Upload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is CV Upload?": {
+      "main": [
+        [
+          {
+            "node": "Get CV File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Saved CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CV File": {
+      "main": [
+        [
+          {
+            "node": "Extract CV Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV Text": {
+      "main": [
+        [
+          {
+            "node": "Save CV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CV Read Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save CV": {
+      "main": [
+        [
+          {
+            "node": "Confirm CV Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Saved CV": {
+      "main": [
+        [
+          {
+            "node": "Has Link?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Link?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Job Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Use Message Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Job Page": {
+      "main": [
+        [
+          {
+            "node": "Extract Page Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Report Fetch Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Page Text": {
+      "main": [
+        [
+          {
+            "node": "Summarize Job Posting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Job Posting": {
+      "main": [
+        [
+          {
+            "node": "Is Job Posting?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Job Posting",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Summary Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Summarize Job Posting",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Job Posting?": {
+      "main": [
+        [
+          {
+            "node": "Format Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Not a Job Posting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Summary": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Send Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Message Text": {
+      "main": [
+        [
+          {
+            "node": "Summarize Job Posting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": null
+}

@@ -1,0 +1,31 @@
+{
+  "tableName": "CV Store",
+  "description": "Stores candidate resumes parsed from Telegram uploads, indexed by Telegram chat ID.",
+  "columns": [
+    {
+      "name": "chat_id",
+      "type": "string",
+      "description": "Telegram user chat ID (used as unique match key for upserting and retrieving user CV)",
+      "required": true,
+      "isMatchKey": true
+    },
+    {
+      "name": "file_name",
+      "type": "string",
+      "description": "Original PDF filename uploaded by the user (default: cv.pdf)",
+      "required": false
+    },
+    {
+      "name": "cv_text",
+      "type": "string",
+      "description": "Extracted text representation from the candidate's CV (capped at 30,000 characters)",
+      "required": true
+    },
+    {
+      "name": "uploaded_at",
+      "type": "string",
+      "description": "Timestamp when the CV was uploaded or updated (format: yyyy-MM-dd HH:mm)",
+      "required": false
+    }
+  ]
+}
