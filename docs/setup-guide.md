@@ -44,14 +44,30 @@ The workflow uses an n8n Data Table to store each candidate's resume text, keyed
 
 ---
 
-## 3. OpenAI API Credential
+## 3. AI Language Model Setup (Cloud or Local AI)
 
-1. Sign up or log into [platform.openai.com](https://platform.openai.com/).
-2. Create an API Key in the **API Keys** section.
-3. In n8n:
-   - Go to **Credentials** > **New Credential** > **OpenAI API**.
-   - Paste your API key and save.
-4. Open the workflow and verify the **OpenAI Chat Model** node is linked to your credential (model defaults to `gpt-4o-mini`).
+The workflow uses an OpenAI-compatible chat model node (`AI Chat Model`). This standard interface connects to **any cloud provider** or **100% local model**.
+
+### Option A: Cloud AI Provider (OpenAI, OpenRouter, Groq, DeepSeek, etc.)
+1. Generate an API key from your preferred provider (e.g. OpenAI, OpenRouter, Groq, or DeepSeek).
+2. In n8n, go to **Credentials** > **New Credential** > **OpenAI API**.
+3. Configure the credential:
+   - **API Key**: Enter your provider's API key.
+   - **Base URL** (if not using standard OpenAI):
+     - **OpenRouter**: `https://openrouter.ai/api/v1`
+     - **Groq**: `https://api.groq.com/openai/v1`
+     - **DeepSeek**: `https://api.deepseek.com/v1`
+4. Open the **AI Chat Model** node and enter your target model name (e.g., `gpt-4o-mini`, `deepseek-chat`, `llama-3.3-70b-versatile`, etc.).
+
+### Option B: Local AI (Ollama, LM Studio, LocalAI, vLLM)
+You can run the extraction completely locally without paying for API tokens:
+1. Ensure your local server is running:
+   - **Ollama**: Default API URL is `http://localhost:11434/v1`
+   - **LM Studio**: Start local server at `http://localhost:1234/v1`
+2. In n8n, create an **OpenAI API** credential:
+   - **API Key**: Enter any dummy string (e.g. `ollama` or `local`).
+   - **Base URL**: Set to your local endpoint (e.g., `http://localhost:11434/v1` or `http://host.docker.internal:11434/v1` if n8n is running in a container).
+3. In the **AI Chat Model** node, set the Model to your local model tag (e.g., `llama3.2`, `mistral`, `qwen2.5`).
 
 ---
 

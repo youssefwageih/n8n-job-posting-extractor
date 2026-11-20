@@ -1,6 +1,6 @@
 # 📋 n8n Job Posting Extractor & CV Matcher
 
-An n8n automation workflow that lets you analyze job postings and match them against your resume directly through Telegram, saving every structured result to a Google Sheet.
+An n8n automation workflow that lets you analyze job postings and match them against your resume directly through Telegram, saving every structured result to a Google Sheet. Powered by any cloud AI provider (OpenAI, OpenRouter, Groq, DeepSeek) or 100% local AI (Ollama, LM Studio).
 
 ---
 
@@ -67,8 +67,11 @@ Open the workflow in n8n and set up the 3 services:
 1. **Telegram**:
    - Create a bot via `@BotFather` on Telegram to get your bot token.
    - Add your Telegram API credential in the `Telegram Trigger`, `Get CV File`, and message nodes.
-2. **OpenAI**:
-   - Add your OpenAI API credential in the `OpenAI Chat Model` node (uses `gpt-4o-mini`).
+2. **AI Model (Cloud or Local)**:
+   - Link your credential in the **AI Chat Model** node.
+   - **Cloud**: Use any provider (OpenAI, OpenRouter, Groq, DeepSeek).
+   - **Local**: Point to Ollama (`http://localhost:11434/v1`) or LM Studio (`http://localhost:1234/v1`).
+   - Enter your preferred model name (e.g. `gpt-4o-mini`, `deepseek-chat`, `llama3.2`, `mistral`).
 3. **Google Sheets**:
    - Create a Google Sheet and add the headers from [`templates/google_sheets_template.csv`](templates/google_sheets_template.csv).
    - In the `Save to Google Sheet` node, select your Google OAuth/Service Account credential and paste your Spreadsheet ID.
@@ -87,7 +90,7 @@ Activate the workflow, send your CV PDF to your bot, and start sending job links
 │   ├── google_sheets_template.csv    # Column headers for your Google Sheet
 │   └── datatable_schema.json         # n8n Data Table column definitions
 ├── docs/
-│   └── setup-guide.md                # Detailed step-by-step setup guide
+│   └── setup-guide.md                # Detailed setup guide (Cloud & Local AI)
 ├── .gitignore
 └── README.md
 ```

@@ -380,14 +380,13 @@
         "model": {
           "__rl": true,
           "value": "gpt-4o-mini",
-          "mode": "list",
-          "cachedResultName": "gpt-4o-mini"
+          "mode": "id"
         },
         "builtInTools": {},
         "options": {}
       },
       "id": "9145112b-bcd9-4714-b3c6-3f26baa5a3ef",
-      "name": "OpenAI Chat Model",
+      "name": "AI Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
@@ -396,8 +395,8 @@
       ],
       "credentials": {
         "openAiApi": {
-          "id": "openai-api-account",
-          "name": "OpenAI API"
+          "id": "ai-api-account",
+          "name": "AI Model / Local AI (OpenAI Compatible)"
         }
       }
     },
@@ -925,7 +924,7 @@
         ]
       ]
     },
-    "OpenAI Chat Model": {
+    "AI Chat Model": {
       "ai_languageModel": [
         [
           {
